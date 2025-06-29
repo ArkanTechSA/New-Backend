@@ -1,0 +1,33 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews
+    </IfModule>
+
+    Options -Indexes
+
+    RewriteEngine On
+
+    <Files .env>
+        Order allow,deny
+        Deny from all
+    </Files>
+
+    <FilesMatch "\.(env|json|lock|md|gitignore|gitattributes|yml|yaml|log|sh|bak|old|sql)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+
+    RedirectMatch 403 ^/(vendor|storage|bootstrap)/
+
+    RedirectMatch 403 /\..*$
+
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>

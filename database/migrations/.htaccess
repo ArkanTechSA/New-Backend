@@ -1,0 +1,59 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+RewriteRule ^$ public/index.php [L]
+RewriteRule (.*) public/$1 [L]
+
+</IfModule>
+
+
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+
+
+<FilesMatch "\.(env|git|log|htaccess|htpasswd|ini|phar|sh|lock|sql)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+RedirectMatch 403 ^/(storage|bootstrap|database|resources|tests|vendor)/.*
+
+<Directory "/storage">
+    <FilesMatch "\.(php|php5|phtml|phar)$">
+        Order deny,allow
+        Deny from all
+    </FilesMatch>
+</Directory>
+
+<Directory "/public/uploads">
+    <FilesMatch "\.(php|php5|phtml|phar)$">
+        Order deny,allow
+        Deny from all
+    </FilesMatch>
+</Directory>
+
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), microphone=()"
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains" env=HTTPS
+</IfModule>
+
+
+
+FileETag None
+Header unset ETag
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresDefault "access plus 1 month"
+</IfModule>

@@ -1,0 +1,164 @@
+name: Laravel CI/CD Quality Report
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_DATABASE: laravel_test
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, bcmath, curl, fileinfo, gd, pdo_mysql
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Copy .env example
+        run: cp .env.example .env
+
+      - name: Update .env for MySQL
+        run: |
+          sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=mysql/' .env
+          sed -i 's/DB_DATABASE=.*/DB_DATABASE=laravel_test/' .env
+          sed -i 's/DB_USERNAME=.*/DB_USERNAME=root/' .env
+          sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=root/' .env
+          sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+          sed -i 's/DB_PORT=.*/DB_PORT=3306/' .env
+
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h127.0.0.1 -uroot -proot --silent; then
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run Security Checks
+        run: composer audit > security_audit.log || true
+
+      - name: Run PHPStan
+        run: |
+          composer require --dev phpstan/phpstan
+          vendor/bin/phpstan analyse app --memory-limit=1G --level=0 | tee phpstan_errors.log
+
+      - name: PHP Lint
+        run: find . -path ./vendor -prune -o -type f -name "*.php" -print | xargs -P 4 -n 1 php -l | tee php_lint.log
+
+      - name: Composer validate
+        run: composer validate | tee composer_validate.log
+
+      - name: Run Laravel Pint
+        run: ./vendor/bin/pint --test
+
+      - name: Run PHP Insights
+        run: ./vendor/bin/phpinsights --format=json > phpinsights.json
+         
+      - name: Debug PHP Insights Output
+        run: |
+          echo "=== محتوى phpinsights.json ==="
+          cat phpinsights.json
+          echo "=============================="
+
+
+      - name: Generate Quality Report
+        run: |
+          # إنشاء ملف افتراضي إذا لم يوجد
+          if [ ! -f "phpinsights.json" ]; then
+            echo '{"summary": {}}' > phpinsights.json
+          fi
+
+          QUALITY_REPORT=$(php -r '
+            $data = json_decode(file_get_contents("phpinsights.json"), true) ?: [];
+            
+            // استخدام البيانات الجديدة إذا كانت موجودة
+            $summary = $data["summary"] ?? [];
+            $metrics = $data["metrics"] ?? [];
+            $files = $data["files"] ?? [];
+            
+            // استخراج القيم مع قيم افتراضية
+            $overall = $summary["quality"] ?? "N/A";
+            $code = $summary["code"] ?? "N/A";
+            $complexity = $summary["complexity"] ?? "N/A";
+            $architecture = $summary["architecture"] ?? "N/A";
+            $style = $summary["style"] ?? "N/A";
+            
+            $warnings = $summary["warnings"] ?? "N/A";
+            $errors = $summary["errors"] ?? "N/A";
+            $files_count = count($files);
+            
+            echo "## تقرير جودة الكود\n";
+            echo "### النسب المئوية:\n";
+            echo "- الجودة الشاملة: $overall%\n";
+            echo "- جودة الكود: $code%\n";
+            echo "- التعقيد: $complexity%\n";
+            echo "- التصميم: $architecture%\n";
+            echo "- النمط: $style%\n";
+            echo "### الإحصائيات:\n";
+            echo "- الملفات: $files_count\n";
+            echo "- التحذيرات: $warnings\n";
+            echo "- الأخطاء: $errors\n";
+          ')
+          
+          CONTROLLERS=$(find app/Http/Controllers -name '*.php' | wc -l)
+          MODELS=$(find app/Models -name '*.php' | wc -l)
+          MIGRATIONS=$(find database/migrations -name '*.php' | wc -l)
+          
+          echo "$QUALITY_REPORT" > report.md
+          echo "### الإحصائيات الإضافية:" >> report.md
+          echo "- الكنترولرات: $CONTROLLERS" >> report.md
+          echo "- الموديلات: $MODELS" >> report.md
+          echo "- المايجريشنات: $MIGRATIONS" >> report.md
+          
+          # احسب الإجمالي فقط إذا كانت جميع القيم رقمية
+          if [[ $overall =~ ^[0-9.]+$ && $code =~ ^[0-9.]+$ && $complexity =~ ^[0-9.]+$ && $architecture =~ ^[0-9.]+$ && $style =~ ^[0-9.]+$ ]]; then
+            TOTAL_SCORE=$(php -r "echo round(($overall + $code + $complexity + $architecture + $style) / 5);")
+            echo "### النسبة الإجمالية: $TOTAL_SCORE%" >> report.md
+          else
+            echo "### النسبة الإجمالية: غير متاحة" >> report.md
+          fi
+          
+          cat report.md
+
+      - name: Upload Final Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workflow-report
+          path: report.md
