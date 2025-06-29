@@ -104,5 +104,9 @@ return [
     'newsletter' => 'القائمة البريدية',
     'select_nationality' => 'اختر الجنسية',
     'nationality' => 'الجنسية',
+    'blocked' => 'محظور',
+    'rows 10' => '10',
+    'rows 20' => '20',
+    'rows 50' => '50',
 
 ];
