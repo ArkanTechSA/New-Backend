@@ -354,7 +354,6 @@ class DashboardController extends Controller
 
     public function newsletterPost(Request $request)
     {
-        // Validate input
         $request->validate([
             'users' => 'required|array',
             'users.*' => 'exists:users,id',
@@ -390,7 +389,6 @@ class DashboardController extends Controller
 
                 $success[] = $user->email;
             } catch (\Throwable $e) {
-                // سجل الايميل اللي فشل
                 $failed[] = [
                     'email' => $user->email,
                     'error' => $e->getMessage(),
@@ -398,10 +396,11 @@ class DashboardController extends Controller
             }
         }
 
-        return response()->json([
-            'status' => 'done',
-            'sent' => $success,
-            'failed' => $failed,
-        ]);
+       return redirect()->back()->with([
+    'status' => 'done',
+    'sent' => $success,
+    'failed' => $failed,
+]);
+
     }
 }
