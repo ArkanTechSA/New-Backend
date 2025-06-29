@@ -180,6 +180,7 @@ class DashboardController extends Controller
             ->pluck('country');
 
         $countries = Country::whereIn('id', $countryIds)->get();
+
         return view('Dashboard.users.service_requesters', compact('users', 'countries'));
     }
 
