@@ -55,7 +55,7 @@ class DashboardController extends Controller
 
         $countries = Country::whereIn('id', $countryIds)->get();
 
-        return view('Dashboard.Users.service_providers', compact('users', 'countries'));
+        return view('Dashboard.users.service_providers', compact('users', 'countries'));
     }
 
     public function searchProviders(Request $request)
@@ -63,8 +63,8 @@ class DashboardController extends Controller
         $role = 1;
 
         $search = $request->input('search');
-        $status = $request->input('status'); // الحالة: 0، 1، 2 أو null
-        $country = $request->input('country'); // اسم الدولة أو كودها
+        $status = $request->input('status');
+        $country = $request->input('country');
 
         $perPage = $request->input('per_page', 10);
         // dd($perPage);
@@ -180,8 +180,7 @@ class DashboardController extends Controller
             ->pluck('country');
 
         $countries = Country::whereIn('id', $countryIds)->get();
-
-        return view('Dashboard.Users.service_requesters', compact('users', 'countries'));
+        return view('Dashboard.users.service_requesters', compact('users', 'countries'));
     }
 
     public function searchRequesters(Request $request)
