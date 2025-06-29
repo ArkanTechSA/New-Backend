@@ -7,6 +7,9 @@
 
     RewriteEngine On
 
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+
     <Files .env>
         Order allow,deny
         Deny from all
@@ -18,7 +21,6 @@
     </FilesMatch>
 
     RedirectMatch 403 ^/(vendor|storage|bootstrap)/
-
     RedirectMatch 403 /\..*$
 
     RewriteCond %{REQUEST_FILENAME} !-d
