@@ -396,11 +396,11 @@ class DashboardController extends Controller
             }
         }
 
-       return redirect()->back()->with([
-    'status' => 'done',
-    'sent' => $success,
-    'failed' => $failed,
-]);
+        return redirect()->back()->with([
+            'status' => 'done',
+            'sent' => $success,
+            'failed' => $failed,
+        ]);
 
     }
 }
