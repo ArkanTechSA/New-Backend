@@ -159,11 +159,11 @@ class DashboardController extends Controller
                 return redirect()->route('admin.requesters')->with('success', __('dashboard.user_created_successfully'));
             }
         } catch (\Exception $e) {
-            dd([
-                'message' => $e->getMessage(),
-                // 'v' =>  $validatedData,
+            // dd([
+            //     'message' => $e->getMessage(),
+            //     // 'v' =>  $validatedData,
 
-            ]);
+            // ]);
         }
     }
 
@@ -309,7 +309,7 @@ class DashboardController extends Controller
             $user->save();
             //   dd('Validation Passed', $validated, $request->all());
         } catch (\Illuminate\Validation\ValidationException $e) {
-            dd('Validation Failed', $e->errors(), $request->all());
+            // dd('Validation Failed', $e->errors(), $request->all());
         }
 
         return back()->with('success', 'تم تحديث بيانات المستخدم بنجاح');
